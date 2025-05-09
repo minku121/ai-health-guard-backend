@@ -163,49 +163,107 @@ def pregnancy():
 
 @app.route('/api/heart', methods=['POST'])
 def heart():
-    data = request.json
-    sex_dict = {'Male': 0, 'Female': 1}
-    cp_dict = {'Low pain': 0, 'Mild pain': 1, 'Moderate pain': 2, 'Extreme pain': 3}
-    fbs_dict = {'Yes': 1, 'No': 0}
-    exang_dict = {'Yes': 1, 'No': 0}
-    thal_dict = {
-        'Normal (No Thalassemia)': 0,
-        'Fixed Defect (Beta-thalassemia minor)': 1,
-        'Reversible Defect (Beta-thalassemia intermedia)': 2,
-        'Serious Defect (Beta-thalassemia major)': 3
-    }
+    try:
+        data = request.json
+        
+        # Input validation
+        required_fields = ['age', 'sex', 'cp', 'trestbps', 'chol', 'fbs', 'restecg', 
+                         'thalach', 'exang', 'oldpeak', 'slope', 'ca', 'thal']
+        
+        if not all(field in data for field in required_fields):
+            return jsonify({'error': 'Missing required fields'}), 400
+            
+        # Validate numeric ranges
+        if not (20 <= float(data['age']) <= 80):
+            return jsonify({'error': 'Age must be between 20 and 80'}), 400
+        if not (90 <= float(data['trestbps']) <= 200):
+            return jsonify({'error': 'Resting blood pressure must be between 90 and 200'}), 400
+        if not (120 <= float(data['chol']) <= 570):
+            return jsonify({'error': 'Cholesterol must be between 120 and 570'}), 400
+        if not (60 <= float(data['thalach']) <= 220):
+            return jsonify({'error': 'Maximum heart rate must be between 60 and 220'}), 400
+        if not (0 <= float(data['oldpeak']) <= 6.2):
+            return jsonify({'error': 'ST depression must be between 0 and 6.2'}), 400
+        if not (1 <= float(data['slope']) <= 3):
+            return jsonify({'error': 'Slope must be between 1 and 3'}), 400
+        if not (0 <= float(data['ca']) <= 3):
+            return jsonify({'error': 'Number of major vessels must be between 0 and 3'}), 400
 
-    input_data = [
-        data['age'],
-        sex_dict[data['sex']],
-        cp_dict[data['cp']],
-        data['trestbps'],
-        data['chol'],
-        fbs_dict[data['fbs']],
-        data['restecg'],
-        data['thalach'],
-        exang_dict[data['exang']],
-        data['oldpeak'],
-        data['slope'],
-        data['ca'],
-        thal_dict[data['thal']]
-    ]
+        # Convert string inputs to appropriate types
+        try:
+            age = float(data['age'])
+            trestbps = float(data['trestbps'])
+            chol = float(data['chol'])
+            restecg = float(data['restecg'])
+            thalach = float(data['thalach'])
+            oldpeak = float(data['oldpeak'])
+            slope = float(data['slope'])
+            ca = float(data['ca'])
+        except ValueError as e:
+            return jsonify({'error': 'Invalid numeric value provided'}), 400
 
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        heart_prediction = heart_model.predict([input_data])
-    
-    if heart_prediction[0] == 1:
-        prediction_text = 'The person is having heart disease'
-        color = "red"
-    else:
-        prediction_text = 'The person does not have any heart disease'
-        color = "#29cb15"
+        # Mapping dictionaries
+        sex_dict = {'Male': 0, 'Female': 1}
+        cp_dict = {
+            'Low pain': 0,      # Typical Angina
+            'Mild pain': 1,     # Atypical Angina
+            'Moderate pain': 2, # Non-anginal Pain
+            'Extreme pain': 3   # Asymptomatic
+        }
+        fbs_dict = {'Yes': 1, 'No': 0}
+        exang_dict = {'Yes': 1, 'No': 0}
+        thal_dict = {
+            'Normal': 0,                # Normal
+            'Fixed': 1,                 # Fixed Defect
+            'Reversible': 2,           # Reversible Defect
+            'Serious': 3               # Serious Defect
+        }
 
-    return jsonify({
-        'prediction_text': prediction_text,
-        'color': color
-    })
+        # Extract thal value from the full string
+        thal_value = data['thal'].split()[0]  # Get first word (e.g., "Normal" from "Normal (No Thalassemia)")
+        
+        if thal_value not in thal_dict:
+            return jsonify({'error': f'Invalid thalassemia value. Must be one of: {", ".join(thal_dict.keys())}'}), 400
+
+        # Prepare input data
+        input_data = [
+            age,
+            sex_dict[data['sex']],
+            cp_dict[data['cp']],
+            trestbps,
+            chol,
+            fbs_dict[data['fbs']],
+            restecg,
+            thalach,
+            exang_dict[data['exang']],
+            oldpeak,
+            slope,
+            ca,
+            thal_dict[thal_value]
+        ]
+
+        # Make prediction
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            heart_prediction = heart_model.predict([input_data])
+        
+        # Prepare response
+        if heart_prediction[0] == 1:
+            prediction_text = 'High Risk: Likely to have heart disease'
+            color = "#FF0000"  # Red
+        else:
+            prediction_text = 'Low Risk: Less likely to have heart disease'
+            color = "#29cb15"  # Green
+
+        return jsonify({
+            'prediction_text': prediction_text,
+            'color': color
+        })
+
+    except KeyError as e:
+        return jsonify({'error': f'Invalid value for field: {str(e)}'}), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/diabetes', methods=['POST'])
 def diabetes():
