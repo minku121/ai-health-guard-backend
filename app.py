@@ -7,32 +7,42 @@ import joblib
 import warnings
 import json
 
+warnings.filterwarnings('ignore', category=UserWarning)
+
 # Flask app
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
 
-# Load datasets
-precautions = pd.read_csv("datasets/Symptoms-Disease Datasets/precautions_df.csv")
-workout = pd.read_csv("datasets/Symptoms-Disease Datasets/workout_df.csv")
-description = pd.read_csv("datasets/Symptoms-Disease Datasets/description.csv", encoding='latin-1')
-medications = pd.read_csv('datasets/Symptoms-Disease Datasets/medications.csv')
-diets = pd.read_csv("datasets/Symptoms-Disease Datasets/diets.csv")
+try:
+    # Load datasets
+    precautions = pd.read_csv("datasets/Symptoms-Disease Datasets/precautions_df.csv")
+    workout = pd.read_csv("datasets/Symptoms-Disease Datasets/workout_df.csv")
+    description = pd.read_csv("datasets/Symptoms-Disease Datasets/description.csv", encoding='latin-1')
+    medications = pd.read_csv('datasets/Symptoms-Disease Datasets/medications.csv')
+    diets = pd.read_csv("datasets/Symptoms-Disease Datasets/diets.csv")
 
-# Load the unique symptoms data
-unique_symptoms = pd.read_csv("datasets/Symptoms-Disease Datasets/unique_symptoms.csv")
+    # Load the unique symptoms data
+    unique_symptoms = pd.read_csv("datasets/Symptoms-Disease Datasets/unique_symptoms.csv")
 
-# Load model
-with open('datasets/Symptoms-Disease Datasets/NaiveBayes.pkl', 'rb') as model_file:
-    svc = pickle.load(model_file)
+    # Load models with error handling
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        # Load main disease prediction model
+        with open('datasets/Symptoms-Disease Datasets/NaiveBayes.pkl', 'rb') as model_file:
+            svc = pickle.load(model_file)
 
-# Load label encoder
-with open('datasets/Symptoms-Disease Datasets/label_encoder.pkl', 'rb') as le_file:
-    le = pickle.load(le_file)
+        # Load label encoder
+        with open('datasets/Symptoms-Disease Datasets/label_encoder.pkl', 'rb') as le_file:
+            le = pickle.load(le_file)
 
-# Load advanced models
-pregnancy_model = joblib.load(open("datasets/advance/models/pregnancy_model.pkl", 'rb'))
-heart_model = pickle.load(open("datasets/advance/models/Heart.sav", 'rb'))
-diabetic_model = pickle.load(open("datasets/advance/models/Diabetes.sav", 'rb'))
+        # Load advanced models
+        pregnancy_model = joblib.load("datasets/advance/models/pregnancy_model.pkl")
+        heart_model = pickle.load(open("datasets/advance/models/Heart.sav", 'rb'))
+        diabetic_model = pickle.load(open("datasets/advance/models/Diabetes.sav", 'rb'))
+
+except Exception as e:
+    print(f"Error loading models or data: {str(e)}")
+    raise
 
 # Normalize column names and data to handle inconsistencies
 workout.rename(columns={'disease': 'Disease'}, inplace=True)
