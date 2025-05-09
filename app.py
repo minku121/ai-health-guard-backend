@@ -109,6 +109,20 @@ def helper(disease):
     return desc, pre, med, die, wrkout
 
 # API Routes
+@app.route("/")
+def home():
+    return jsonify({
+        "message": "Welcome to AI Health Guard API",
+        "version": "1.0",
+        "endpoints": {
+            "/api/symptoms": "GET - Get list of all symptoms",
+            "/api/analyze": "POST - Analyze symptoms and get disease prediction",
+            "/api/pregnancy": "POST - Get pregnancy risk assessment",
+            "/api/heart": "POST - Get heart disease prediction",
+            "/api/diabetes": "POST - Get diabetes prediction"
+        }
+    })
+
 @app.route("/api/symptoms")
 def get_symptoms():
     symptoms_list = unique_symptoms['symptom'].tolist()
